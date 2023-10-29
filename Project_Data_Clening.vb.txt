@@ -1,0 +1,424 @@
+Sub CleanData()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim header As String
+    Dim col As Long
+    Dim keepColumns As Variant
+    Dim colToDelete As Range
+    Dim i As Long
+    Dim lastrowstc  As Long
+    Dim StateCodeCol As Range
+    Dim cell As Range
+    Dim StatesDict As Object
+    Dim StateCode As String
+    Dim CountryCol As Range
+    Dim lastRowVoucher As Long
+    Dim str As String
+    Dim poDetails As Range
+    Dim poNumberCell As Range
+    Dim textParts() As String
+    Dim textBeforeSpace As String
+    Dim checkRange As Range
+    Dim lastCol As Long
+    Dim newCol As Long
+    Dim fillRange As Range
+    Dim endRow As Long
+    Dim startRow As Long
+    Dim usedRng As Range
+    Dim savePath As String
+    Dim fileName As String
+
+    ' Set the worksheet
+    Set ws = ThisWorkbook.Sheets("PURCHASE - TRADING MATERIAL")
+
+  ' Find the last row in Column A (Column 1)
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+
+    ' Loop through rows in Column A to find the row with "Date" header
+    For Row = 1 To lastRow
+        If ws.Cells(Row, 1).value = "Date" Then
+            ' Delete all rows above the "Date" header
+            If Row > 1 Then
+                ws.Rows("1:" & Row - 1).Delete
+            End If
+            Exit For
+        End If
+    Next Row
+    
+    ' Add the "Suppliers" column
+    ws.Columns("C").Insert
+    ws.Cells(1, 3).value = "Item Name"
+
+    ' List of column headers to keep
+    keepColumns = Array("Date", "Particulars", "Address", "Voucher Type", "Voucher No.", _
+                        "Voucher Ref. No.", "Voucher Ref. Date", "GSTIN/UIN", "Quantity", _
+                        "Rate", "Value", "Item Name", "Gross Total")
+
+    ' Loop through each column
+    For col = ws.UsedRange.Columns.Count To 1 Step -1
+        header = ws.Cells(1, col).value
+        ' Check if the column header is in the list of columns to keep
+        If Not IsInArray(header, keepColumns) Then
+            ' Add this column to the range of columns to delete
+            If colToDelete Is Nothing Then
+                Set colToDelete = ws.Columns(col)
+            Else
+                Set colToDelete = Union(colToDelete, ws.Columns(col))
+            End If
+        End If
+    Next col
+'
+    ' Delete the columns that are not in the list of columns to keep
+    If Not colToDelete Is Nothing Then
+        colToDelete.Delete
+    End If
+
+ ' Apply filter to the "Date" column for blank values
+    ws.Range("A1").AutoFilter Field:=1, Criteria1:="="
+
+    ' Loop through visible cells in the "Particulars" column
+    For Each cell In ws.Range("B2:B" & lastRow).SpecialCells(xlCellTypeVisible)
+        ' Cut and paste each visible cell into the "Item Name" column
+        cell.Cut Destination:=ws.Cells(cell.Row, 3) ' Column C (Item Name)
+    Next cell
+'
+    ' Removing the filter from the "Date" column
+    ws.AutoFilterMode = False
+
+        ' Loop through the specified columns and fill in blank cells with the value from above
+    Dim columnsToFill As Variant
+    columnsToFill = Array("Date", "Particulars", "Voucher Type", "Voucher No.", "Voucher Ref. No.", "Address", "Voucher Ref. Date", "GSTIN/UIN", "Gross Total")
+
+    For Each ColumnName In columnsToFill
+        col = WorksheetFunction.Match(ColumnName, ws.Rows(1), 0)
+        For Each cell In ws.Range(ws.Cells(2, col), ws.Cells(lastRow, col))
+            If cell.value = "" Then
+                cell.value = cell.Offset(-1, 0).value
+            End If
+        Next cell
+    Next ColumnName
+
+
+        ' Find the last row in column C
+    lastRow = ws.Cells(ws.Rows.Count, "C").End(xlUp).Row
+
+    ' Apply filter to the "Item Name" column for blank values
+    ws.Range("C1:C" & lastRow).AutoFilter Field:=1, Criteria1:=""
+
+    ' Select all visible rows with blank cells in the "Item Name" column
+    On Error Resume Next ' Ignore error if no visible rows are blank
+    ws.Range("C2:C" & lastRow).SpecialCells(xlCellTypeVisible).EntireRow.Delete
+    On Error GoTo 0 ' Reset error handling
+
+    ' Removing the filter from the "Item Name" column
+    ws.AutoFilterMode = False
+
+'------------------
+  ' Renaming headers
+    For Each cell In ws.Rows(1).Cells
+        Select Case cell.value
+            Case "Date": cell.value = "DT_DATE"
+            Case "Item Name": cell.value = "ITEM_NAME"
+            Case "Voucher Type": cell.value = "Voucher_Type"
+            Case "Voucher No.": cell.value = "Voucher_No"
+            Case "Voucher Ref. No.": cell.value = "Voucher_Ref_No"
+            Case "Voucher Ref. Date": cell.value = "Voucher_Ref_Date"
+            Case "GSTIN/UIN": cell.value = "GSTIN_UIN"
+            Case "Gross Total": cell.value = "Gross_Total"
+            ' Add more cases if needed
+        End Select
+    Next cell
+
+    ' Deleting rows with "Grand Total" in the ITEM_NAME column and all rows below it
+    For i = ws.Cells(ws.Rows.Count, "C").End(xlUp).Row To 2 Step -1
+        If ws.Cells(i, "C").value = "Grand Total" Then
+            ws.Rows(i & ":" & ws.Rows.Count).Delete
+            Exit For
+        End If
+    Next i
+
+  ws.Columns("J").Insert
+    'ws.Range("J2:J" & ws.Cells(ws.Rows.Count, "J").End(xlUp).Row).ClearContents
+    
+
+
+    ' Find the last row with data in column "I"
+    lastRow = ws.Cells(ws.Rows.Count, "I").End(xlUp).Row
+    
+    ' Insert the formula in cell J2
+    ws.Range("J2:J" & ws.Cells(ws.Rows.Count, "J").End(xlUp).Row).Clear
+    ws.Cells(i, 10).NumberFormat = "General"
+    ws.Range("J2").Formula = "=LEFT(I2, 2)"
+     
+    
+    ' Now, if we want the formula to replicate like dragging down the cell corner in Excel's UI,
+    ' we fill the formula down from J2 to the last row.
+    ws.Range("J2:J" & lastRow).FillDown
+    ws.Range("J2:J" & lastRow).value = ws.Range("J2:J" & lastRow).value
+    
+    ws.Cells(1, 10).value = "State_code"
+
+    
+    ws.Columns("K").Insert
+    ws.Cells(1, 11).value = "State_Name"
+    
+        ws.Columns("L").Insert
+    ws.Cells(1, 12).value = "Country"
+    
+ '-------------------------
+    '-------------------------------------------------------
+    
+     ' Create a dictionary to map state codes to state names
+    Set StatesDict = CreateObject("Scripting.Dictionary")
+    
+    ' Map the state codes to the respective names
+    StatesDict.Add "1", "Jammu & Kashmir"
+    StatesDict.Add "2", "Himachal Pradesh"
+    StatesDict.Add "3", "Punjab"
+    StatesDict.Add "4", "Chandigarh"
+    StatesDict.Add "5", "Uttarakhand"
+    StatesDict.Add "6", "Haryana"
+    StatesDict.Add "7", "Delhi"
+    StatesDict.Add "8", "Rajasthan"
+    StatesDict.Add "9", "Uttar Pradesh"
+    StatesDict.Add "10", "Bihar"
+    StatesDict.Add "11", "Sikkim"
+    StatesDict.Add "12", "Arunachal Pradesh"
+    StatesDict.Add "13", "Nagaland"
+    StatesDict.Add "14", "Manipur"
+    StatesDict.Add "15", "Mizoram"
+    StatesDict.Add "16", "Tripura"
+    StatesDict.Add "17", "Meghalaya"
+    StatesDict.Add "18", "Assam"
+    StatesDict.Add "19", "West Bengal"
+    StatesDict.Add "20", "Jharkhand"
+    StatesDict.Add "21", "Odisha"
+    StatesDict.Add "22", "Chattisgarh"
+    StatesDict.Add "23", "Madhya Pradesh"
+    StatesDict.Add "24", "Gujarat"
+    StatesDict.Add "25", "Daman & Diu"
+    StatesDict.Add "26", "Dadra & Nagar Haveli"
+    StatesDict.Add "27", "Maharashtra"
+    StatesDict.Add "28", "Andhra Pradesh"
+    StatesDict.Add "29", "Karnataka"
+    StatesDict.Add "30", "Goa"
+    StatesDict.Add "31", "Lakshadweep"
+    StatesDict.Add "32", "Kerala"
+    StatesDict.Add "33", "Tamil Nadu"
+    StatesDict.Add "34", "Puducherry"
+    StatesDict.Add "35", "Andaman & Nicobar Islands"
+    StatesDict.Add "36", "Telangana"
+    StatesDict.Add "37", "Hyderabad GST Commissionerate"
+    StatesDict.Add "38", "Kurnool GST Commissionerate"
+
+    ' Find the last row with data in the "State_Code" column (assuming it's in column K)
+ lastRow = ws.Cells(ws.Rows.Count, "J").End(xlUp).Row
+    ' Define the range for the State_Code column
+    Set StateCodeCol = ws.Range("J2:J" & lastRow)
+    
+    
+    ' Check each cell in the State_Code column and assign state names based on state codes
+    For Each cell In StateCodeCol
+        ' Convert the numeric state code to a string and remove any extra spaces
+
+        StateCode = Trim(CStr(cell.value))
+
+        ' Check if the state cod  e exists in our dictionary
+        If StatesDict.exists(StateCode) Then
+            ' The state code is found, assign the corresponding state name to the adjacent cell in column K
+            cell.Offset(0, 1).value = StatesDict(StateCode)
+        Else
+            ' The state code is not found, mark it as unknown (or handle this appropriately)
+            cell.Offset(0, 1).value = "Unknown"
+        End If
+    Next cell
+    
+ 
+'    ' Cleanup to free memory
+'    Set ws = Nothing
+'    Set StatesDict = Nothing
+'    Set StateCodeCol = Nothing
+
+Set CountryCol = ws.Range("L2:L" & lastRow) ' "L" assumes the "Country" column is L; change if different.
+
+' Loop through each cell in the "State_Code" column.
+For Each cell In StateCodeCol
+    ' Check if the value is a number and between 1 and 38 (inclusive).
+    If IsNumeric(cell.value) Then
+        If Val(cell.value) >= 1 And Val(cell.value) <= 38 Then
+            ' It's a recognized state code, so the country is "India."
+            cell.Offset(0, 2).value = "India" ' Offset by 2 columns to go from "State_Code" to "Country."
+        Else
+            ' It's not a recognized state code, so the product is "Imported."
+            cell.Offset(0, 2).value = "Imported"
+        End If
+    Else
+        ' If the cell doesn't contain a numeric value, you might default to "Imported" or handle it differently.
+        cell.Offset(0, 2).value = "Imported"
+    End If
+Next cell
+
+'    ws.Columns("M").Insert
+'    ws.Cells(1, 13).value = "PO_Details"
+'
+'    lastRow = ws.Cells(ws.Rows.Count, "I").End(xlUp).Row
+'    ' Insert the formula in cell M2
+'    ws.Range("M2:M" & ws.Cells(ws.Rows.Count, "M").End(xlUp).Row).Clear
+'    ws.Cells(F, 13).NumberFormat = "General"
+'    ws.Range("M2").Formula = "=VLOOKUP(F2,'[PO&POD.xlsx]Purchase Register'!$E$2:$O$3211,11,FALSE)"
+'
+'    ' Now, if we want the formula to replicate like dragging down the cell corner in Excel's UI,
+'    ' we fill the formula down from M2 to the last row.
+'    ws.Range("M2:M" & lastRow).FillDown
+'    ws.Range("M2:M" & lastRow).value = ws.Range("M2:M" & lastRow).value
+
+ws.Columns("M").Insert
+    ws.Cells(1, 13).value = "PO_Details"
+
+    lastRow = ws.Cells(ws.Rows.Count, "F").End(xlUp).Row
+
+    ' This part is where you potentially made a typo.
+    ' "ws.Cells(F, 13).NumberFormat" - the "F" doesn't make sense.
+    ' Replacing "F" with "2".
+    ws.Cells(2, 13).NumberFormat = "General"
+    ws.Range("M2").Formula = "=VLOOKUP(F2,'[PO&POD.xlsx]Purchase Register'!$E$2:$O$3211,11,FALSE)"
+    ws.Range("M2:M" & lastRow).FillDown
+    ws.Range("M2:M" & lastRow).value = ws.Range("M2:M" & lastRow).value
+    
+  '---------------------------------------
+  
+  ws.Columns("N").Insert
+    ws.Cells(1, 14).value = "PO_NO"
+    ' Find the last row with data in the "Po_Details" column. Adjust "A" to match the column where "Po_Details" is located.
+    lastRow = ws.Cells(ws.Rows.Count, "M").End(xlUp).Row
+
+    ' Set the range for "Po_Details", assuming your data starts on row 2. Adjust if your data starts on a different row.
+    ' Also, adjust "A" to the actual column where "Po_Details" is located.
+    Set poDetails = ws.Range("M2:M" & lastRow)
+' Loop through each cell in the "Po_Details" range
+    For Each cell In poDetails
+        ' Check if the cell is not empty and contains a string
+        If Not IsEmpty(cell.value) And VarType(cell.value) = vbString Then
+            
+            ' Split the string by space and check if it results in multiple parts
+            textParts = Split(cell.value, " ")
+            
+            ' Ensure textParts array has at least one element
+            If UBound(textParts) >= 0 Then
+                ' Get the text before the first space
+                textBeforeSpace = textParts(0)
+                
+                ' Find the corresponding cell in the "PO_NO" column. Adjust the column number as needed.
+                Set poNumberCell = ws.Cells(cell.Row, 14) ' Assuming "N" is the 14th column
+                
+                ' Move the text to the "PO_NO" column
+                poNumberCell.value = textBeforeSpace
+                
+                ' Cut the original segment from the Po_Details cell, leaving the rest of the content intact.
+                ' We're also checking if there's anything left in the cell after the first space.
+                If Len(cell.value) > Len(textBeforeSpace) + 1 Then
+                    cell.value = Mid(cell.value, Len(textBeforeSpace) + 2) ' 1 for the space, and 1 to move past it
+                Else
+                    cell.value = "" ' If there's nothing after the first segment, clear the cell
+                End If
+            End If
+            
+        End If
+    Next cell
+    
+    ' Find the last row with data in column M
+    lastRow = ws.Cells(ws.Rows.Count, "M").End(xlUp).Row
+
+    ' Loop from the first row to the last row in column M
+    For Each cell In ws.Range("M1:M" & lastRow)
+        
+        ' Check if the cell is not empty
+        If Not IsEmpty(cell.value) Then
+            
+            ' Check if the cell's content is a string and contains the "dt." prefix
+            If VarType(cell.value) = vbString Then
+                If Left(cell.value, 3) = "dt." Then
+                    
+                    ' Remove the "dt." part of the string and keep the rest
+                    cell.value = Mid(cell.value, 4) ' start from the 4th character to the end
+                End If
+            End If
+        End If
+        
+    Next cell
+
+lastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+
+' Add a new column after the last used column
+
+newCol = lastCol + 1
+ws.Columns(newCol).Insert
+
+' Add the header for the new column
+ws.Cells(1, newCol).value = "Pur_Type"
+
+' Determine the last row for the data entry
+
+startRow = 2  ' Assuming data starts at row 2 below the header
+
+
+endRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row  ' Assuming column "A" has data in every row
+
+' Fill the new column with "RM"
+
+Set fillRange = ws.Range(ws.Cells(startRow, newCol), ws.Cells(endRow, newCol))
+fillRange.value = "TM"
+
+
+Set usedRng = ws.UsedRange
+
+    ' Loop through each cell in the used range
+    For Each cell In usedRng
+        ' Check if the cell contains an error value
+        If Application.WorksheetFunction.IsNA(cell.value) Then
+            ' If it's an "#N/A" error, replace it with 0
+            cell.value = 0
+        End If
+    Next cell
+
+ For Each cell In usedRng
+        ' Check if the cell is empty
+        If IsEmpty(cell.value) Then
+            ' If it's empty, replace it with 0
+            cell.value = 0
+        End If
+    Next cell
+
+
+  ' Set the worksheet object (in this case, the sheet you want to convert)
+    Set ws = ThisWorkbook.ActiveSheet  ' or replace ActiveSheet with Sheets("YourSheetName")
+
+    ' Specify the save path and file name (change to your desired location and name)
+    savePath = "C:\Users\Administrator\Desktop\New folder\VBA_Clean_Files\"
+    fileName = "TM.csv"
+
+    ' Save the worksheet as a CSV file
+    ws.SaveAs fileName:=savePath & fileName, FileFormat:=xlCSV, CreateBackup:=False
+
+    ' Confirmation message (optional)
+    MsgBox "The file has been saved as CSV at the following location: " & savePath & fileName, vbInformation
+
+
+
+
+
+End Sub
+'
+Function IsInArray(value As String, arr As Variant) As Boolean
+    Dim i As Long
+    For i = LBound(arr) To UBound(arr)
+        If StrComp(value, arr(i), vbTextCompare) = 0 Then
+            IsInArray = True
+            Exit Function
+        End If
+    Next i
+    IsInArray = False
+End Function
+
+
+
