@@ -1,0 +1,545 @@
+Sub CreateMonthlySheets()
+    Dim months As Variant
+    Dim i As Integer
+
+    ' Define all month names
+    months = Array("Jan", "Feb", "Mar", "Apr", "May", "Jun", _
+                   "Jul", "Aug", "Sept", "Oct", "Nov", "Dec")
+
+    ' Loop through each month in the array
+    For i = 0 To 11 ' Array is 0-based
+        ' Check if the sheet already exists
+        Dim SheetExists As Boolean
+        SheetExists = False
+        For Each sht In ThisWorkbook.Sheets
+            If sht.Name = months(i) Then
+                SheetExists = True
+                Exit For
+            End If
+        Next sht
+
+        ' Create a new sheet with the month name if it doesn't exist
+        If Not SheetExists Then
+            Sheets.Add(After:=Sheets(Sheets.Count)).Name = months(i)
+        End If
+    Next i
+
+'=============
+'Copying logo and pasting to the months sheets
+
+    Dim ppcSheet As Worksheet
+    Dim targetSheet As Worksheet
+    Dim logo As Shape
+
+    Dim monthNames As Variant
+
+    ' Define the PPC sheet
+    Set ppcSheet = ThisWorkbook.Sheets("PPC")
+
+    ' Identify the logo on the PPC sheet
+    ' This assumes the logo is the first shape in the "PPC" sheet.
+    ' Adjust the index or provide a name if necessary.
+    Set logo = ppcSheet.Shapes(1)
+
+    ' Array of month names
+    monthNames = Array("Jan", "Feb", "Mar", "Apr", "May", "Jun", _
+                   "Jul", "Aug", "Sept", "Oct", "Nov", "Dec")
+
+    ' Loop through each month and paste the logo
+    For i = LBound(monthNames) To UBound(monthNames)
+        Set targetSheet = ThisWorkbook.Sheets(monthNames(i))
+
+        '=========
+           ' The rest of the operations for pasting logo, setting dimensions, locking, and text formatting
+
+        ' Now, set headers for row 6
+'        With targetSheet
+'            .Cells(6, 1).Value = "DATE"
+'            .Cells(6, 2).Value = "SHIFT"
+'            .Cells(6, 3).Value = "RM NAME"
+'            .Cells(6, 4).Value = "MATERIAL GRADE"
+'            .Cells(6, 5).Value = "COLOUR"
+'            .Cells(6, 6).Value = "CAP WT"
+'            .Cells(6, 7).Value = "MB%"
+'            .Cells(6, 8).Value = "PACKING"
+'            .Cells(6, 9).Value = "TOTAL BOX NO"
+'            .Cells(6, 10).Value = "PROD QTY PCS"
+'            .Cells(6, 11).Value = "FG WT (KG)"
+'            .Cells(6, 12).Value = "REJECTION CAP WT (KG)"
+'            .Cells(6, 13).Value = "CAP Rejection in PCS"
+'            .Cells(6, 14).Value = "LUMP WT in(KG)"
+'            .Cells(6, 15).Value = "TOTAL REJECTION (KG)"
+'            .Cells(6, 16).Value = "MAT. WITH MB in KG"
+'            .Cells(6, 17).Value = "MB CONUMED (KG)"
+'            .Cells(6, 18).Value = "RM CONSUMED (KG)"
+'            .Cells(6, 19).Value = "Rej %"
+'            .Cells(6, 20).Value = "BD MIN."
+'
+'            ' Optional: Format the header row, e.g., bold and center align
+'            .Rows(6).Font.Bold = True
+'            .Rows(6).HorizontalAlignment = xlCenter
+'            .Rows(6).VerticalAlignment = xlCenter
+'        End With
+        '=========
+
+
+        ' Copy the logo
+        logo.Copy
+
+        ' Activate the target sheet and select the first cell
+        targetSheet.Activate
+        targetSheet.Cells(1, 1).Select
+
+        ' Paste the logo into the target sheet
+        targetSheet.Paste
+
+        ' Set pasted image at the desired location
+        With targetSheet.Shapes(targetSheet.Shapes.Count)
+            .Top = targetSheet.Rows(1).Top    ' Adjust top position
+            .Left = targetSheet.Columns(1).Left ' Adjust left position
+            '============
+              ' Reference the pasted logo
+        Dim pastedLogo As Shape
+        Set pastedLogo = targetSheet.Shapes(targetSheet.Shapes.Count)
+
+        ' Set dimensions and scale of the pasted logo
+        With pastedLogo
+            .LockAspectRatio = msoFalse        ' Unlock aspect ratio for scaling
+            .Height = Application.CentimetersToPoints(1.6)  ' Set height
+            .Width = Application.CentimetersToPoints(2.1)    ' Set width
+            .Rotation = 0                      ' Set rotation
+            .ScaleHeight 1.88, msoFalse        ' Set scale height (188%)
+            .ScaleWidth 2.35, msoFalse          ' Set scale width (167%)
+            ' Lock the logo's aspect ratio, size, and position
+            .LockAspectRatio = msoTrue
+            .Locked = msoTrue
+            .Placement = xlMove  ' Or xlMoveAndSize to move with cells
+            '--------
+        End With
+        
+              ' Merging columns C to R for row 1 and 2, 3 and 4, and row 5 separately
+        targetSheet.Range("C1:R2").Merge
+        targetSheet.Range("C3:R4").Merge
+        targetSheet.Range("C5:R5").Merge
+
+                ' Adding text to the merged cells of C to R in rows 1 and 2
+        With targetSheet.Range("C1:R2")
+            .Value = "KUSUM POLY PLAST PVT LTD, SANAND"  ' Set the text
+            .Font.Size = 24                             ' Set font size
+            .HorizontalAlignment = xlCenter             ' Center horizontally
+            .VerticalAlignment = xlCenter               ' Center vertically
+        End With
+
+                        ' Adding text to the merged cells of C to R in rows 1 and 2
+        With targetSheet.Range("C3:R4")
+            .Value = "PRODUCTION CUM RAW MATERIAL CONSUMTION REPORT"  ' Set the text
+            .Font.Size = 14                             ' Set font size
+            .HorizontalAlignment = xlCenter             ' Center horizontally
+            .VerticalAlignment = xlCenter               ' Center vertically
+        End With
+
+                                ' Adding text to the merged cells of C to R in rows 1 and 2
+        With targetSheet.Range("C5:R5")
+            .Value = "CMM1"  ' Set the text
+            .Font.Size = 20                             ' Set font size
+            .HorizontalAlignment = xlCenter             ' Center horizontally
+            .VerticalAlignment = xlCenter               ' Center vertically
+        End With
+        End With
+
+        
+        
+        
+  '==================================
+  'Copying Data columns and value from Database sheet to the DUMMY sheet.
+  
+    Next i
+   ' Deselect everything and reselect A1
+    targetSheet.Cells(1, 1).Select
+    
+    Dim wsSource As Worksheet
+    Dim wsDest As Worksheet
+    Dim lastRow As Long
+    Dim iCol As Integer
+
+    ' Turn off screen updating to speed up the macro
+    Application.ScreenUpdating = False
+
+    ' Define the source worksheet
+    Set wsSource = ThisWorkbook.Sheets("Database") ' Change "Database" to your sheet's name
+
+    ' Create or reference the "DUMMY" sheet
+    On Error Resume Next ' Ignore errors in the next line
+    Set wsDest = ThisWorkbook.Sheets("DUMMY")
+    If wsDest Is Nothing Then
+        Set wsDest = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+        wsDest.Name = "DUMMY"
+    End If
+    wsDest.Cells.Clear ' Clear any existing data
+    On Error GoTo 0 ' Stop ignoring errors
+
+    ' Find the last row with data in any of the columns from E to Z and HL to HX
+    For Each col In Array("I", "J", "M", "P", "Q", "R", "T", "V", "HM", "HN", "HO")
+        iCol = wsSource.Columns(col).Column
+        lastRow = Application.Max(lastRow, wsSource.Cells(wsSource.Rows.Count, iCol).End(xlUp).Row)
+    Next col
+
+    ' Copy each column individually from row 6 to the last row with data
+    Dim destCol As Integer
+    destCol = 1 ' Start from the first column in the destination sheet
+    For Each col In Array("I", "J", "M", "P", "Q", "R", "T", "V", "HM", "HN", "HO")
+        wsSource.Range(col & "6:" & col & lastRow).Copy
+        wsDest.Cells(1, destCol).PasteSpecial Paste:=xlPasteValues
+        destCol = destCol + 1 ' Move to the next column in the destination sheet
+    Next col
+
+ ' Format Column E (5th column in Excel) as Short Date in "DUMMY" sheet
+    wsDest.Columns("B:B").NumberFormat = "m/d/yyyy" ' Adjust the format as needed
+     ' Insert a new column after Column E
+    wsDest.Columns("C:C").Insert Shift:=xlToRight
+
+    ' Apply the formula to the new column F until the last cell of column E
+    Dim formulaRange As Range
+    wsDest.Cells(1, "C").Value = "Month"
+    Set formulaRange = wsDest.Range("C2:C" & lastRow) ' Assuming headers are in row 1
+    
+    formulaRange.Formula = "=TEXT(A2, ""mmm"")"
+        ' Copy and paste the formula results as values to remove the formulas
+    formulaRange.Value = formulaRange.Value
+
+         Dim headers As Variant
+    headers = Array("PACKING", "PROD. QTY.", "FG WT", "TOTAL REJECTION", "MAT. WITH MB", "MB CONSUMED", "RM CONSUMED", "CAP Rejection in PCS", "BD MIN.")
+
+    ' Starting at column O, insert the new columns and set their headers
+
+    For i = 0 To UBound(headers)
+        ' Inserting at column O initially then P, Q, and so on for each header
+        wsDest.Columns(Chr(79 + i) & ":" & Chr(79 + i)).Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+        wsDest.Cells(1, 14 + i).Value = headers(i)  ' 15 corresponds to column O
+    Next i
+
+    
+  ' Determine the last non-empty cell in the "Date" column
+    Dim dateCol As String
+    dateCol = "E" ' Change this to the actual column letter of "Date" in the "DUMMY" sheet
+    Dim lastDateRow As Long
+    lastDateRow = wsDest.Cells(wsDest.Rows.Count, dateCol).End(xlUp).Row
+'
+'    ' Set the header for column N as "Remarks" just as a precaution
+    wsDest.Cells(1, "M").Value = "LUMP WT"
+'
+    ' Fill column N with 5500 from row 2 to the last non-empty cell of the "Date" column
+    If lastDateRow >= 2 Then  ' Check to ensure there's data below the header
+        Dim remarksRange As Range
+        Set remarksRange = wsDest.Range("N2:N" & lastDateRow)
+        remarksRange.Value = 5500
+    End If
+
+    Set formulaRange = wsDest.Range("O2:O" & lastRow) ' Assuming headers are in row 1
+    formulaRange.Formula = "=N2*K2"
+        ' Copy and paste the formula results as values to remove the formulas
+    formulaRange.Value = formulaRange.Value
+
+
+     Set formulaRange = wsDest.Range("P2:P" & lastRow) ' Assuming headers are in row 1
+    formulaRange.Formula = "=O2*J2/1000"
+        ' Copy and paste the formula results as values to remove the formulas
+    formulaRange.Value = formulaRange.Value
+
+
+    Set formulaRange = wsDest.Range("Q2:Q" & lastRow) ' Assuming headers are in row 1
+    formulaRange.Formula = "=L2+M2"
+        ' Copy and paste the formula results as values to remove the formulas
+    formulaRange.Value = formulaRange.Value
+
+
+    Set formulaRange = wsDest.Range("R2:R" & lastRow) ' Assuming headers are in row 1
+    formulaRange.Formula = "=Q2+P2"
+        ' Copy and paste the formula results as values to remove the formulas
+    formulaRange.Value = formulaRange.Value
+
+
+    Set formulaRange = wsDest.Range("S2:S" & lastRow) ' Assuming headers are in row 1
+    formulaRange.Formula = "=R2*E2%"
+        ' Copy and paste the formula results as values to remove the formulas
+    formulaRange.Value = formulaRange.Value
+
+    Set formulaRange = wsDest.Range("T2:T" & lastRow) ' Assuming headers are in row 1
+    formulaRange.Formula = "=R2-S2"
+        ' Copy and paste the formula results as values to remove the formulas
+    formulaRange.Value = formulaRange.Value
+
+    Set formulaRange = wsDest.Range("U2:U" & lastRow) ' Assuming headers are in row 1
+    formulaRange.Formula = "=(L2*1000)/2.305"
+        ' Copy and paste the formula results as values to remove the formulas
+    formulaRange.Value = formulaRange.Value
+
+     Set formulaRange = wsDest.Range("V2:V" & lastRow) ' Assuming headers are in row 1
+    formulaRange.Formula = "=(L2*1000)/2.305"
+        ' Copy and paste the formula results as values to remove the formulas
+    formulaRange.Value = formulaRange.Value
+    '================
+
+
+
+
+    Dim monthCol As Integer
+
+    Dim monthName As String
+    Dim rng As Range
+
+    ' Define the source worksheet and month column
+    Set wsSource = ThisWorkbook.Sheets("DUMMY")
+    monthCol = 3 ' Assuming "Month" is in column C
+
+    ' Define the array of month abbreviations
+    monthNames = Array("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec")
+
+    ' Find the last row with data in the "Month" column
+    lastRow = wsSource.Cells(wsSource.Rows.Count, monthCol).End(xlUp).Row
+
+    ' Loop through each month
+
+    For i = LBound(monthNames) To UBound(monthNames)
+        monthName = monthNames(i)
+
+        ' Set the destination worksheet for the current month
+        On Error Resume Next
+        Set wsDest = ThisWorkbook.Sheets(monthName)
+        On Error GoTo 0
+        If wsDest Is Nothing Then
+            MsgBox "Sheet for " & monthName & " does not exist. Skipping."
+        End If
+
+        ' Apply filter for the current month
+        wsSource.AutoFilterMode = False ' Clear existing filters
+        wsSource.Range("A1:Z" & lastRow).AutoFilter Field:=monthCol, Criteria1:=monthName
+
+        ' Check if there are any visible cells after filtering
+        On Error Resume Next
+        Set rng = wsSource.Range("A1:Z" & lastRow).SpecialCells(xlCellTypeVisible)
+        On Error GoTo 0
+
+        ' If there are visible cells (i.e., filtered data exists)
+        If Not rng Is Nothing Then
+            rng.Copy Destination:=wsDest.Cells(6, 1) ' Copy to the destination sheet starting at row 6
+        End If
+
+        ' Clear the filter
+        wsSource.AutoFilterMode = False
+    Next i
+
+    
+    '==================================
+  
+  'Unmerging all the cell to Give headers for the sheet.
+  
+     Dim monthSheets As Variant
+    Dim SheetName As Variant
+    Dim ws As Worksheet
+
+    ' List of month sheet names
+    monthSheets = Array("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec")
+
+    ' Loop through each specified month sheet and unmerge cells
+    For Each SheetName In monthSheets
+        On Error Resume Next ' Skip if the sheet doesn't exist
+        Set ws = ThisWorkbook.Sheets(SheetName)
+        On Error GoTo 0 ' Resume normal error handling
+        If Not ws Is Nothing Then
+            ' Unmerge any merged cells in the sheet
+            ws.Cells.UnMerge
+        End If
+     Next SheetName
+
+    ' List of month sheet names
+    monthSheets = Array("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec")
+    ' Assuming the "Month" column is C (the 3rd column)
+    monthCol = 3
+
+    ' Loop through each specified month sheet
+ 
+    For i = LBound(monthSheets) To UBound(monthSheets)
+        On Error Resume Next ' In case a sheet doesn't exist, skip it
+        Set ws = ThisWorkbook.Sheets(monthSheets(i))
+        On Error GoTo 0 ' Resume normal error handling
+        If Not ws Is Nothing Then
+            ' Delete the entire "Month" column
+            ws.Columns(monthCol).Delete
+        End If
+      Next i
+
+'======
+'Giving header for all the sheets.
+
+
+ ' List of month sheet names
+    monthSheets = Array("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec")
+
+    ' Loop through each specified month sheet and merge & format cells
+    For Each SheetName In monthSheets
+        On Error Resume Next ' Skip if the sheet doesn't exist
+        Set ws = ThisWorkbook.Sheets(SheetName)
+        On Error GoTo 0 ' Resume normal error handling
+        If Not ws Is Nothing Then
+            
+            With ws.Range("D1:T2")
+                .Merge ' Merge cells from D2 to T2
+                .Value = "KUSUM POLYPLAST PRIVATE LIMITED, SANAND, AHMEDABAD" ' Set the value
+                .HorizontalAlignment = xlCenter ' Center the text horizontally
+                .VerticalAlignment = xlCenter ' Center the text vertically
+                .Font.Size = 24 ' Set font size to 24
+                .Font.Bold = True
+            
+            End With
+            
+            ' Merge D3:T5 and set value and format
+            With ws.Range("D3:T4")
+                .Merge
+                .Value = "PRODUCTION CUM RAW MATERIAL CONSUMTION REPORT"
+                .HorizontalAlignment = xlCenter
+                .VerticalAlignment = xlCenter
+                .Font.Size = 18
+                .Font.Bold = True
+            End With
+            
+            ' Merge D6:T6 and set value and format
+            With ws.Range("D5:T5")
+                .Merge
+                .Value = "CCM1"
+                .HorizontalAlignment = xlCenter
+                .VerticalAlignment = xlCenter
+                .Font.Size = 20
+                .Font.Bold = True
+            End With
+            
+            
+            
+              ' Loop through each specified month sheet and autofit columns
+
+        On Error Resume Next ' Skip if the sheet doesn't exist
+        Set ws = ThisWorkbook.Sheets(SheetName)
+        On Error GoTo 0 ' Resume normal error handling
+        If Not ws Is Nothing Then
+            ' Autofit all columns in the sheet
+            ws.Columns.AutoFit
+        End If
+        End If
+    Next SheetName
+'===========================================
+
+    
+   'Changing Date format of all the sheet from serial Date to Short Date format.
+
+    Dim cell As Range
+ 
+    months = Array("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+    ' Loop through each sheet named Jan to Dec
+    For Each SheetName In months
+        ' Check if the sheet exists
+        On Error Resume Next ' Ignore error if sheet doesn't exist
+        Set ws = ThisWorkbook.Sheets(SheetName)
+        On Error GoTo 0 ' Resume normal error handling
+        
+        ' If the worksheet exists then proceed
+        If Not ws Is Nothing Then
+            ' Loop through each cell in the Date column starting at A6
+            For Each cell In ws.Range("A6:A" & ws.Cells(ws.Rows.Count, "A").End(xlUp).Row)
+                ' Check if cell contains a serial number
+                If IsNumeric(cell.Value) And cell.Value > 0 Then
+                    ' Change format to dd/mm/yyyy
+                    cell.NumberFormat = "dd/mm/yyyy"
+                    cell.Value = DateSerial(Year(cell.Value), Month(cell.Value), Day(cell.Value))
+                End If
+            Next cell
+        End If
+        Set ws = Nothing ' Reset the worksheet object
+    Next SheetName
+
+'===========================
+
+    Dim lastCol As Long
+
+    months = Array("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+    ' Loop through each sheet named Jan to Dec
+    For Each SheetName In months
+        ' Check if the sheet exists
+        On Error Resume Next ' Ignore error if sheet doesn't exist
+        Set ws = ThisWorkbook.Sheets(SheetName)
+        On Error GoTo 0 ' Resume normal error handling
+        
+        ' If the worksheet exists then proceed
+        If Not ws Is Nothing Then
+            ' Bold the headers in row 6
+            ws.Rows(6).Font.Bold = True
+            
+            ' Find the last non-blank cell in the worksheet (for both row and column)
+            lastRow = ws.Cells.Find(What:="*", _
+                                    After:=ws.Range("A1"), _
+                                    Lookat:=xlPart, _
+                                    LookIn:=xlFormulas, _
+                                    SearchOrder:=xlByRows, _
+                                    SearchDirection:=xlPrevious, _
+                                    MatchCase:=False).Row
+            lastCol = ws.Cells.Find(What:="*", _
+                                    After:=ws.Range("A1"), _
+                                    Lookat:=xlPart, _
+                                    LookIn:=xlFormulas, _
+                                    SearchOrder:=xlByColumns, _
+                                    SearchDirection:=xlPrevious, _
+                                    MatchCase:=False).Column
+
+            ' Apply borders to all used cells including merged ones
+            With ws.Range(ws.Cells(1, 1), ws.Cells(lastRow, lastCol)).Borders
+                .LineStyle = xlContinuous
+                .Color = vbBlack
+                .Weight = xlThin
+            End With
+        End If
+        Set ws = Nothing ' Reset the worksheet object for the next iteration
+    Next SheetName
+
+
+
+'======================================
+
+'Deleting all other sheet instead of that sheet where Date column is empty.
+
+    ' List of month sheet names
+    monthSheets = Array("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec")
+
+    ' Loop through each specified month sheet
+    For Each SheetName In monthSheets
+        On Error Resume Next ' Skip if the sheet doesn't exist
+        Set ws = ThisWorkbook.Sheets(SheetName)
+        On Error GoTo 0 ' Resume normal error handling
+
+        ' If the sheet exists, check if cell A8 in the "Date" column is empty
+        If Not ws Is Nothing Then
+            If IsEmpty(ws.Cells(7, 1).Value) Then ' Check if cell A8 is empty
+                Application.DisplayAlerts = False ' Turn off warning dialog
+                ws.Delete ' Delete the sheet
+                Application.DisplayAlerts = True ' Turn warning dialog back on
+            End If
+        End If
+    Next SheetName
+
+    
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
