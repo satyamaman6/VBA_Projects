@@ -105,7 +105,7 @@ Sub InsertDataIntoSQL()
     Dim iRowNo As Integer
     
     ' Change these values to match your environment and table structure
-    serverName = "RSPC-60\DBS"  ' e.g., "localhost"
+    serverName = "RSPC-76\DBS"  ' e.g., "localhost"
     databaseName = "KPPL"
     tblName = "FSS"  ' e.g., "MyTable"
 
