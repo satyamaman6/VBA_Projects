@@ -1,0 +1,166 @@
+Public LoginInstance As Integer
+
+Sub CopyPasteValuesAndLock()
+    Dim wsPPC As Worksheet, wsDatabase As Worksheet, wsRepo As Worksheet, wsSum As Worksheet
+    Dim targetRowDB As Long, targetRowRepo, targetRowSum As Long
+    Dim copyFromCells As Variant, pasteToColumns As Variant
+    Dim i As Long
+
+    ' Set references to the sheets
+    Set wsPPC = ThisWorkbook.Sheets("Sheet1")
+    Set wsDatabase = ThisWorkbook.Sheets("DataBase")
+    Set wsRepo = ThisWorkbook.Sheets("Repo")
+    Set wsSum = ThisWorkbook.Sheets("sum")
+
+    ' Define cells to copy from and columns to paste to
+    copyFromCells = Array("M6", "M9", "M12", "M15", "M18", "M21", "M24", "M27", "M30", "M33", "M36")
+    pasteToColumns = Array("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K")
+
+    ' Find the first blank cell in column I after row 6 in DataBase sheet
+    targetRowDB = wsDatabase.Cells(wsDatabase.Rows.Count, "I").End(xlUp).Row + 1
+    If targetRowDB < 6 Then targetRowDB = 6
+
+    ' Find the first blank cell in column I after row 6 in Repo sheet
+    targetRowRepo = wsRepo.Cells(wsRepo.Rows.Count, "I").End(xlUp).Row + 1
+    If targetRowRepo < 6 Then targetRowRepo = 6
+
+    ' Paste values in the same row across different columns in DataBase sheet
+    For i = LBound(copyFromCells) To UBound(copyFromCells)
+        wsDatabase.Cells(targetRowDB, pasteToColumns(i)).Value = wsPPC.Range(copyFromCells(i)).Value
+    Next i
+
+    ' Paste values in the same row across different columns in Repo sheet
+    For i = LBound(copyFromCells) To UBound(copyFromCells)
+        wsRepo.Cells(targetRowRepo, pasteToColumns(i)).Value = wsPPC.Range(copyFromCells(i)).Value
+    Next i
+
+End Sub
+
+Sub CopyDataToSumSheet()
+    Dim wsPPC As Worksheet, wsSum As Worksheet, wsDaily As Worksheet
+    Dim targetRowSum As Long
+    Dim copyFromCells As Variant, pasteToColumns As Variant
+    Dim i As Long
+
+    ' Set the sheet variables
+    Set wsPPC = ThisWorkbook.Sheets("Sheet1")
+    Set wsSum = ThisWorkbook.Sheets("Sum")
+    Set wsDaily = ThisWorkbook.Sheets("Daily_Transection")
+
+    ' Define the cells to copy and the columns to paste
+    copyFromCells = Array("M6", "M9", "M30")
+    pasteToColumns = Array("A", "C", "F")
+
+    ' Find the last used row in the "Sum" sheet
+    targetRowSum = wsSum.Cells(wsSum.Rows.Count, "A").End(xlUp).Row + 1
+    If targetRowSum < 2 Then targetRowSum = 2
+
+    ' Loop through the arrays and copy/paste the values to "Sum" sheet
+    For i = LBound(copyFromCells) To UBound(copyFromCells)
+        wsSum.Cells(targetRowSum, pasteToColumns(i)).Value = wsPPC.Range(copyFromCells(i)).Value
+    Next i
+
+    ' Set "Receive" in the current row of column B in "Sum" sheet
+    wsSum.Cells(targetRowSum, "B").Value = "RECEIVE"
+
+    ' Copy the values to "Daily_Transection" sheet
+    wsDaily.Cells(targetRowSum, "A").Value = wsPPC.Range(copyFromCells(0)).Value
+    wsDaily.Cells(targetRowSum, "C").Value = wsPPC.Range(copyFromCells(1)).Value
+    wsDaily.Cells(targetRowSum, "F").Value = wsPPC.Range(copyFromCells(2)).Value
+
+    ' Set "RECEIVE" in the current row of column B in "Daily_Transection" sheet
+    wsDaily.Cells(targetRowSum, "B").Value = "RECEIVE"
+End Sub
+
+'Sub ClearAndMergeCells()
+'   Dim ws As Worksheet
+'    Dim mergedCells As Variant
+'    Dim cell As Range
+'
+'    ' Set the worksheet reference
+'    Set ws = ThisWorkbook.Sheets("Sheet1")
+'
+'    ' Array of merged cell addresses
+'    mergedCells = Array("M6", "M9", "M12", "M15", "M18", "M21", "M24", "M27", "M30", "M33", "M36")
+'
+'    ' Loop through the merged cells and clear their values
+'    For Each cellAddress In mergedCells
+'        Set cell = ws.Range(cellAddress)
+'
+'        ' Check if the cell is merged
+'        If cell.MergeCells Then
+'            ' Clear the value of the merged cell
+'            cell.MergeArea.ClearContents
+'        Else
+'            ' Clear the value of the single cell
+'            cell.ClearContents
+'        End If
+'    Next cellAddress
+'End Sub
+Sub InsertDataIntoSQL()
+    ' Define the necessary variables
+    Dim conn As Object
+    Dim serverName As String, databaseName As String
+    Dim tblName As String, sSQL As String
+    Dim iRowNo As Integer
+    
+    ' Change these values to match your environment and table structure
+    serverName = "RSPC-60\DBS"  ' e.g., "localhost"
+    databaseName = "KPPL"
+    tblName = "FSS"  ' e.g., "MyTable"
+
+    ' Create the connection object
+    Set conn = CreateObject("ADODB.Connection")
+    
+    ' Open the connection to the database
+    On Error Resume Next
+    conn.Open "Provider=SQLOLEDB;Data Source=" & serverName & ";Initial Catalog=" & databaseName & ";Integrated Security=SSPI;"
+    On Error GoTo 0
+
+    ' Check for connection errors
+    If Err.Number <> 0 Then
+        MsgBox "Error: " & Err.Description, vbExclamation
+        Exit Sub
+    End If
+
+    ' Start from the last row in the "DataBase" sheet
+    iRowNo = ThisWorkbook.Sheets("DataBase").Cells(ThisWorkbook.Sheets("DataBase").Rows.Count, 10).End(xlUp).Row
+    
+    ' Check if there is any data to insert
+    If iRowNo < 6 Then
+        MsgBox "No data to insert.", vbInformation
+        Exit Sub
+    End If
+    
+    ' Create the INSERT SQL statement for the last row
+    sSQL = "INSERT INTO " & tblName & " (Date, Product_Name, Party_Name, City, Vehicle_No, Grade, CHALLAN_ANNEXURE_II_NO, No_of_Bags, KG, Invoice_No, Invoice_Date) VALUES ('" & _
+            Format(ThisWorkbook.Sheets("DataBase").Cells(iRowNo, 1).Value, "yyyy-mm-dd") & "', '" & _
+            ThisWorkbook.Sheets("DataBase").Cells(iRowNo, 2).Value & "', '" & _
+            ThisWorkbook.Sheets("DataBase").Cells(iRowNo, 3).Value & "', '" & _
+            ThisWorkbook.Sheets("DataBase").Cells(iRowNo, 4).Value & "', '" & _
+            ThisWorkbook.Sheets("DataBase").Cells(iRowNo, 5).Value & "', '" & _
+            ThisWorkbook.Sheets("DataBase").Cells(iRowNo, 6).Value & "', '" & _
+            ThisWorkbook.Sheets("DataBase").Cells(iRowNo, 7).Value & "', " & _
+            ThisWorkbook.Sheets("DataBase").Cells(iRowNo, 8).Value & ", " & _
+            ThisWorkbook.Sheets("DataBase").Cells(iRowNo, 9).Value & ", '" & _
+            ThisWorkbook.Sheets("DataBase").Cells(iRowNo, 10).Value & "', '" & _
+            Format(ThisWorkbook.Sheets("DataBase").Cells(iRowNo, 11).Value, "dd-mm-yyyy") & "')"
+
+    ' Execute the SQL statement
+    conn.Execute sSQL
+    
+    ' Close the connection
+    conn.Close
+    
+    ' Clean up
+    Set conn = Nothing
+    
+    MsgBox "Data uploaded successfully!"
+End Sub
+Sub InitialSubmit()
+    Call CopyPasteValuesAndLock
+    Call CopyDataToSumSheet
+    Call InsertDataIntoSQL
+End Sub
+
+
